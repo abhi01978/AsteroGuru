@@ -69,7 +69,7 @@
 </div>
 
 <script>
-const API = "http://localhost:3000/api/user"; 
+const API = "https://asteroguru.onrender.com/api/user"; 
 
 async function checkAuth() {
   try {
@@ -93,7 +93,7 @@ checkAuth();
 
 // Logout functionality
 document.getElementById("logoutBtn").addEventListener("click", async () => {
-  await fetch("http://localhost:3000/logout", { credentials: "include" });
+  await fetch("https://asteroguru.onrender.com/logout", { credentials: "include" });
   location.reload(); // refresh so UI updates
 });
 </script>
@@ -651,4 +651,5 @@ loadNavbarUser();
   </script>
 
 </body>
+
 </html>
