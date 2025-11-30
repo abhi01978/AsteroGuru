@@ -50,6 +50,7 @@ app.use(express.static("public"));
 app.use("/uploads", express.static("uploads"));
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
+app.set('trust proxy', 1); // trust first proxy
 
 app.use(session({
   secret: "astro-secret-123",
@@ -60,6 +61,7 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000 
   }
 }));
+
 // ================ MONGODB ================
 
 mongoose.connect(process.env.MONGO_URI)
@@ -359,6 +361,7 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
 
