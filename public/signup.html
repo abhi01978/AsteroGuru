@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AstroGuru Signup</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <!-- Signup Page Container -->
+<div class="min-h-screen bg-gradient-to-br from-orange-50 to-white flex flex-col justify-center px-6 py-8">
+
+  <!-- Logo / App Name -->
+  <div class="flex flex-col items-center mb-8">
+    <div class="w-20 h-20 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+      ✨
+    </div>
+    <h1 class="mt-4 text-2xl font-bold text-orange-600">AstroGuru</h1>
+    <p class="text-gray-500 text-sm mt-1 text-center">
+      Sign up to discover your personalized astrology insights
+    </p>
+  </div>
+
+  <!-- Signup Form -->
+  <!-- Signup Form -->
+<form action="/signup" method="POST" enctype="multipart/form-data" class="bg-white rounded-3xl shadow-xl p-6 flex flex-col space-y-4">
+
+  <!-- Profile Image Upload -->
+  <div class="flex flex-col items-center">
+    <label class="text-gray-600 text-sm font-semibold mb-2">Profile Image</label>
+    <div class="relative w-24 h-24">
+      <img id="profilePreview" src="https://via.placeholder.com/96" class="w-24 h-24 rounded-full object-cover border-2 border-orange-200 shadow-md" />
+      
+      <!-- REQUIRED: name added -->
+      <input type="file" name="profileImage" accept="image/*" id="profileImage" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+      
+      <div class="absolute bottom-0 right-0 bg-orange-500 text-white p-1 rounded-full shadow-md cursor-pointer">
+        ✎
+      </div>
+    </div>
+  </div>
+
+  <!-- Full Name -->
+  <div class="flex flex-col">
+    <label class="text-gray-600 text-sm font-semibold mb-1">Full Name</label>
+    <input type="text" name="fullName" placeholder="Enter your full name" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" required />
+  </div>
+
+  <!-- Email -->
+  <div class="flex flex-col">
+    <label class="text-gray-600 text-sm font-semibold mb-1">Email</label>
+    <input type="email" name="email" placeholder="Enter your email" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" required />
+  </div>
+
+  <!-- Password -->
+  <div class="flex flex-col">
+    <label class="text-gray-600 text-sm font-semibold mb-1">Password</label>
+    <input type="password" name="password" placeholder="Enter your password" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" required />
+  </div>
+<!-- User Type -->
+<div class="flex flex-col">
+  <label class="text-gray-600 text-sm font-semibold mb-1">I am a</label>
+  <select name="userType" id="userType" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" required>
+    <option value="">Select User Type</option>
+    <option value="customer">Customer</option>
+    <option value="astrologer">Astrologer</option>
+  </select>
+</div>
+
+<!-- Astrologer Price (Initially hidden) -->
+<!-- Astrologer Price + Experience (Initially hidden) -->
+<div id="priceSection" class="flex flex-col space-y-2 hidden">
+  <label class="text-gray-600 text-sm font-semibold">Set Your Price & Experience</label>
+
+  <input type="number" name="price1min" placeholder="1 Minute Price (₹)" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" min="0" />
+  <input type="number" name="price10min" placeholder="10 Minutes Price (₹)" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" min="0" />
+  <input type="number" name="price30min" placeholder="30 Minutes Price (₹)" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" min="0" />
+  
+  <!-- New: Experience Input -->
+  <input type="number" name="experience" placeholder="Years of Experience" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" min="0" />
+</div>
+
+<script>
+  const userTypeSelect = document.getElementById('userType');
+  const priceSection = document.getElementById('priceSection');
+
+  userTypeSelect.addEventListener('change', () => {
+    if (userTypeSelect.value === 'astrologer') {
+      priceSection.classList.remove('hidden');
+    } else {
+      priceSection.classList.add('hidden');
+      // Optional: Clear price & experience inputs when hidden
+      priceSection.querySelectorAll('input').forEach(input => input.value = '');
+    }
+  });
+</script>
+
+
+  <!-- Date of Birth -->
+  <div class="flex flex-col">
+    <label class="text-gray-600 text-sm font-semibold mb-1">Date of Birth</label>
+    <input type="date" name="dob" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" required />
+  </div>
+
+  <!-- Gender -->
+  <div class="flex flex-col">
+    <label class="text-gray-600 text-sm font-semibold mb-1">Gender</label>
+    <select name="gender" class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" required>
+      <option value="">Select Gender</option>
+      <option value="male">Male</option>
+      <option value="female">Female</option>
+      <option value="other">Other</option>
+    </select>
+  </div>
+
+  <!-- Signup Button -->
+  <button type="submit" class="mt-4 w-full bg-gradient-to-br from-orange-400 to-red-500 text-white py-3 rounded-2xl font-bold shadow-lg hover:scale-105 transition-transform">
+    Sign Up
+  </button>
+
+  <!-- Already have account -->
+  <p class="text-center text-gray-500 text-sm mt-2">
+    Already have an account? <a href="/login" class="text-orange-500 font-semibold">Log In</a>
+  </p>
+
+</form>
+
+
+</div>
+
+
+</body>
+</html>

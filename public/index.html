@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Taara – Roz Tera Nakshatra Bolta Hai</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="manifest" href="data:application/manifest+json,{\"name\":\"Taara\",\"short_name\":\"Taara\",\"start_url\":\".\",\"display\":\"standalone\",\"background_color\":\"#fff8e1\",\"theme_color\":\"#ff6b35\",\"icons\":[{\"src\":\"https://via.placeholder.com/192/ff6b35/white?text=T\",\"sizes\":\"192x192\",\"type\":\"image/png\"}]}" />
+  <style>
+    body { font-family: 'Inter', sans-serif; margin: 0; background: #fff8e1; }
+    .phone { width: 100%; max-width: 430px; height: 100vh; overflow-y: auto; margin: 0 auto; position: relative; }
+    @media (min-width: 768px) {
+      .phone { border-radius: 40px; height: 860px; box-shadow: 0 20px 60px rgba(0,0,0,0.4); border: 12px solid #000; background: #fff8e1; }
+    }
+    #sidebar { transform: translateX(-100%); transition: transform 0.35s ease; z-index: 9999; }
+    #sidebar.active { transform: translateX(0); }
+    #overlay { transition: opacity 0.3s ease; z-index: 9998; }
+    .gradient-card { background: linear-gradient(135deg, #ff6b35, #f7931e, #ff9a00); }
+  </style>
+  <link
+  rel="stylesheet"
+  href="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.css"
+/>
+<script src="https://cdn.jsdelivr.net/npm/swiper@10/swiper-bundle.min.js"></script>
+
+</head>
+<body class="flex justify-center items-center min-h-screen bg-orange-50">
+
+  <!-- Overlay -->
+  <div id="overlay" class="fixed inset-0 bg-black/60 hidden z-[9998]"></div>
+
+ <!-- Sidebar -->
+<div id="sidebar" class="fixed top-0 left-0 w-72 h-full bg-white/95 backdrop-blur-2xl shadow-2xl p-4 z-[9999] flex flex-col justify-between">
+
+  <!-- Header -->
+  <div>
+    <div class="flex justify-between items-center mb-6">
+      <h2 class="text-3xl font-extrabold text-orange-600">Taara</h2>
+      <button id="closeBtn" class="text-3xl text-gray-700 hover:text-black transition">×</button>
+    </div>
+
+    <!-- Menu Items -->
+    <ul class="space-y-2 text-md font-medium text-gray-800">
+      <li class="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 cursor-pointer transition">Daily Horoscope</li>
+      <li class="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 cursor-pointer transition">Kundli</li>
+      <li class="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 cursor-pointer transition">Match Making</li>
+      <li class="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 cursor-pointer transition">Live Astrologer</li>
+      <li class="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 cursor-pointer transition">Remedies</li>
+      <li class="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 cursor-pointer transition">Panchang</li>
+      <li class="flex items-center gap-3 p-3 rounded-lg hover:bg-orange-50 cursor-pointer transition">My Reports</li>
+    </ul>
+
+    <!-- Talk to Astrologer Button -->
+    <button class="mt-6 w-full py-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-xl font-bold shadow-md hover:scale-105 transition">
+      Talk to Astrologer Now
+    </button>
+  </div>
+
+  <!-- Auth Buttons -->
+  <div id="authButtons" class="flex flex-col gap-2 hidden">
+  <button onclick="location.href='/login.html'" class="w-full py-3 bg-orange-600 text-white rounded-xl font-bold hover:scale-105 transition">Login</button>
+  <button onclick="location.href='/signup.html'" class="w-full py-3 bg-gray-200 text-gray-800 rounded-xl font-bold hover:scale-105 transition">Sign Up</button>
+</div>
+
+<!-- Logged In UI -->
+<div id="userButtons" class="flex flex-col gap-2 hidden">
+  <button onclick="location.href='/profile.html'" class="w-full py-3 bg-orange-600 text-white rounded-xl font-bold hover:scale-105 transition">Profile</button>
+  <button id="logoutBtn" class="w-full py-3 bg-red-500 text-white rounded-xl font-bold hover:scale-105 transition">Logout</button>
+</div>
+
+<script>
+const API = "http://localhost:3000/api/user"; 
+
+async function checkAuth() {
+  try {
+    const res = await fetch(API, { credentials: "include" });
+
+    if (res.ok) {
+      // User logged in
+      document.getElementById("authButtons").classList.add("hidden");
+      document.getElementById("userButtons").classList.remove("hidden");
+    } else {
+      // User NOT logged in
+      document.getElementById("authButtons").classList.remove("hidden");
+      document.getElementById("userButtons").classList.add("hidden");
+    }
+  } catch {
+    console.log("Auth check failed");
+  }
+}
+
+checkAuth();
+
+// Logout functionality
+document.getElementById("logoutBtn").addEventListener("click", async () => {
+  await fetch("http://localhost:3000/logout", { credentials: "include" });
+  location.reload(); // refresh so UI updates
+});
+</script>
+
+</div>
+
+
+  <!-- Main App Screen -->
+  <div class="phone bg-orange-50">
+
+    <!-- Top Navbar -->
+    <div class="fixed top-0 left-0 right-0 bg-white/90 backdrop-blur-xl flex justify-between items-center px-6 py-4 shadow-md z-40 border-b border-orange-200">
+      <img id="menuBtn" src="https://img.icons8.com/ios-filled/50/ff6b35/menu--v1.png" class="w-7 cursor-pointer" />
+     <div class="flex items-center gap-3" id="userInfo">
+  <!-- User Name -->
+  <span id="userName" class="bg-orange-500 text-white px-4 py-1 rounded-full text-sm font-bold">User</span>
+  <!-- Profile Image -->
+  <img id="userAvatar" src="/default-user.png" class="w-10 h-10 rounded-full object-cover border-2 border-white shadow-md" />
+</div>
+
+<script>
+
+async function loadNavbarUser() {
+  try {
+    const res = await fetch(API, { credentials: "include" });
+    if (!res.ok) return; // user not logged in, do nothing
+
+    const user = await res.json();
+
+    // Update Name
+    document.getElementById("userName").textContent = user.fullName || "User";
+
+    // Update Avatar
+    if (user.profileImage) {
+      document.getElementById("userAvatar").src = "/uploads/" + user.profileImage;
+    } else {
+      document.getElementById("userAvatar").src = "/default-user.png";
+    }
+
+  } catch (err) {
+    console.log("Navbar user load error:", err);
+  }
+}
+
+loadNavbarUser();
+</script>
+
+    </div>
+
+    <!-- Scrollable Content -->
+    <div class="pt-20 px-4 pb-32">
+
+      <!-- Search Bar -->
+      <div class="mt-4 relative">
+        <input class="w-full bg-white rounded-2xl py-4 pl-12 pr-6 text-lg placeholder-gray-500 shadow-lg" placeholder="Kundli, Horoscope, Remedy dhundho..." />
+        <img src="https://img.icons8.com/ios-filled/30/ff6b35/search--v1.png" class="w-6 absolute left-4 top-1/2 -translate-y-1/2" />
+      </div>
+
+<!-- Astrology Hero Card Without Content -->
+<div class="p-4 flex flex-col items-center text-center">
+
+  <!-- GIF -->
+  <div class="w-full flex justify-center mb-3">
+    <img 
+      src="https://www.theloveguruastrologer.com/images/content/zodiac.gif"
+      class="w-40 h-40 object-contain"
+    />
+  </div>
+
+  <!-- Short Astrology Content -->
+  <h2 class="text-xl font-semibold text-gray-800 mb-1">
+    Discover Your Zodiac Insights
+  </h2>
+
+  <p class="text-sm text-gray-500 leading-relaxed">
+    Apne rashi ke hisaab se daily guidance, love update, aur
+    lucky tips yahin dekhein.
+  </p>
+
+</div>
+
+
+<!-- Slider Container -->
+<div class="swiper myRashiSlider mt-4 px-2">
+
+  <div class="swiper-wrapper">
+
+    <!-- 1. Aries (Mesh) -->
+    <div class="swiper-slide">
+      <div class="bg-gradient-to-br from-orange-100 via-white to-orange-50 
+                  rounded-3xl p-6 shadow-[0_4px_18px_rgba(0,0,0,0.08)] 
+                  border border-orange-200">
+
+        <div class="flex items-center gap-3">
+          <span class="text-4xl">♈</span>
+          <p class="text-xl font-bold text-orange-700">Mesh (Aries)</p>
+        </div>
+
+        <p class="text-[15px] text-gray-700 mt-4 leading-relaxed">
+          🌞 Subah suraj ko jal arpit karein — positive energy boost milega.
+        </p>
+
+        <button class="mt-6 w-full bg-orange-500 text-white py-3 rounded-xl font-semibold shadow-md active:scale-95 transition-all">
+          ✔ Done Kar Diya
+        </button>
+      </div>
+    </div>
+
+
+    <!-- 2. Taurus (Vrishabha) -->
+    <div class="swiper-slide">
+      <div class="bg-gradient-to-br from-orange-100 via-white to-orange-50 
+                  rounded-3xl p-6 shadow-[0_4px_18px_rgba(0,0,0,0.08)] 
+                  border border-orange-200">
+
+        <div class="flex items-center gap-3">
+          <span class="text-4xl">♉</span>
+          <p class="text-xl font-bold text-orange-700">Vrishabha (Taurus)</p>
+        </div>
+
+        <p class="text-[15px] text-gray-700 mt-4 leading-relaxed">
+          🥛 Aaj ek glass doodh mein haldi mila kar piyein — health improve hogi.
+        </p>
+
+        <button class="mt-6 w-full bg-orange-500 text-white py-3 rounded-xl font-semibold shadow-md active:scale-95 transition-all">
+          ✔ Done Kar Diya
+        </button>
+      </div>
+    </div>
+
+
+    <!-- 3. Gemini (Mithun) -->
+    <div class="swiper-slide">
+      <div class="bg-gradient-to-br from-orange-100 via-white to-orange-50 
+                  rounded-3xl p-6 shadow-[0_4px_18px_rgba(0,0,0,0.08)] 
+                  border border-orange-200">
+
+        <div class="flex items-center gap-3">
+          <span class="text-4xl">♊</span>
+          <p class="text-xl font-bold text-orange-700">Mithun (Gemini)</p>
+        </div>
+
+        <p class="text-[15px] text-gray-700 mt-4 leading-relaxed">
+          🌿 Tulsi ka ek patta khayein — immunity aur focus dono strong honge.
+        </p>
+
+        <button class="mt-6 w-full bg-orange-500 text-white py-3 rounded-xl font-semibold shadow-md active:scale-95 transition-all">
+          ✔ Done Kar Diya
+        </button>
+      </div>
+    </div>
+
+  </div>
+<br>
+  <!-- Pagination -->
+  <div class="swiper-pagination mt-3 "></div>
+  <script>
+  var swiper = new Swiper(".myRashiSlider", {
+    slidesPerView: 1.15,
+    spaceBetween: 18,
+    centeredSlides: true,
+    loop: true,
+
+    autoplay: {
+      delay: 2600,
+      disableOnInteraction: false,
+    },
+
+    speed: 700,   // smoother transitions
+
+    pagination: {
+      el: ".swiper-pagination",
+      clickable: true,
+    },
+  });
+</script>
+</div>
+
+<!-- Panchang Section – Modern Mobile UI -->
+<div class="mt-8 px-4">
+  <h2 class="text-2xl font-bold text-gray-900 mb-4 text-center tracking-tight">
+    Panchang Today 📿
+  </h2>
+
+  <div class="flex space-x-4 overflow-x-auto pb-2">
+
+    <!-- Tithi Card -->
+    <div class="flex-shrink-0 w-40 bg-gradient-to-br from-orange-100 to-orange-50 rounded-3xl p-4 shadow-lg border border-orange-200 flex flex-col items-center">
+      <div class="text-xl mb-2">🪔</div>
+      <p class="text-sm text-gray-500">Tithi</p>
+      <p class="text-lg font-semibold text-orange-600 mt-1 text-center">Shukla Paksha Tritiya</p>
+    </div>
+
+    <!-- Nakshatra Card -->
+    <div class="flex-shrink-0 w-40 bg-gradient-to-br from-yellow-100 to-yellow-50 rounded-3xl p-4 shadow-lg border border-yellow-200 flex flex-col items-center">
+      <div class="text-xl mb-2">🌙</div>
+      <p class="text-sm text-gray-500">Nakshatra</p>
+      <p class="text-lg font-semibold text-yellow-600 mt-1 text-center">Rohini</p>
+    </div>
+
+    <!-- Yoga Card -->
+    <div class="flex-shrink-0 w-40 bg-gradient-to-br from-green-100 to-green-50 rounded-3xl p-4 shadow-lg border border-green-200 flex flex-col items-center">
+      <div class="text-xl mb-2">☀️</div>
+      <p class="text-sm text-gray-500">Yoga</p>
+      <p class="text-lg font-semibold text-green-600 mt-1 text-center">Vishkambha</p>
+    </div>
+
+    <!-- Karan Card -->
+    <div class="flex-shrink-0 w-40 bg-gradient-to-br from-purple-100 to-purple-50 rounded-3xl p-4 shadow-lg border border-purple-200 flex flex-col items-center">
+      <div class="text-xl mb-2">🕉️</div>
+      <p class="text-sm text-gray-500">Karan</p>
+      <p class="text-lg font-semibold text-purple-600 mt-1 text-center">Bava</p>
+    </div>
+
+    <!-- Sunrise / Sunset Card -->
+    <div class="flex-shrink-0 w-40 bg-gradient-to-br from-blue-100 to-blue-50 rounded-3xl p-4 shadow-lg border border-blue-200 flex flex-col items-center">
+      <div class="text-xl mb-2">🌅</div>
+      <p class="text-sm text-gray-500">Sunrise / Sunset</p>
+      <p class="text-lg font-semibold text-blue-600 mt-1 text-center">6:12 AM / 5:48 PM</p>
+    </div>
+
+    <!-- Choghadiya Card -->
+    <div class="flex-shrink-0 w-40 bg-gradient-to-br from-pink-100 to-pink-50 rounded-3xl p-4 shadow-lg border border-pink-200 flex flex-col items-center">
+      <div class="text-xl mb-2">⌛</div>
+      <p class="text-sm text-gray-500">Choghadiya</p>
+      <p class="text-lg font-semibold text-pink-600 mt-1 text-center">Amrit</p>
+    </div>
+
+  </div>
+</div>
+  <!-- Quick Access Grid – ICON + TITLE + DESCRIPTION -->
+<div class="mt-8 px-2">
+  <h2 class="text-2xl font-bold text-gray-900 mb-5 text-center tracking-tight">
+    Quick Access
+  </h2>
+
+  <div class="grid grid-cols-2 gap-4">
+
+    <!-- CARD -->
+    <button class="bg-white rounded-3xl p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)] 
+                   active:scale-95 transition-all border border-gray-100">
+      <div class="flex flex-col items-center gap-3">
+
+        <!-- ICON WRAPPER -->
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-600 
+                    flex items-center justify-center shadow-lg text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 3v2m0 14v2m9-9h-2M5 12H3m15.364 6.364l-1.414-1.414M7.05 7.05L5.636 5.636m12.728 0l-1.414 1.414M7.05 16.95l-1.414 1.414M12 8a4 4 0 100 8 4 4 0 000-8z"/>
+          </svg>
+        </div>
+
+        <p class="text-[17px] font-semibold text-gray-800">Free Kundli</p>
+        <p class="text-xs text-gray-500 text-center leading-tight">
+          अपनी जन्म कुंडली मुफ्त देखें
+        </p>
+      </div>
+    </button>
+
+    <!-- CARD -->
+    <button class="bg-white rounded-3xl p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)] 
+                   active:scale-95 transition-all border border-gray-100">
+      <div class="flex flex-col items-center gap-3">
+
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-pink-500 to-rose-600 
+                    flex items-center justify-center shadow-lg text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M4.318 6.318a4.5 4.5 0 016.364 0L12 7.636l1.318-1.318a4.5 4.5 0 116.364 6.364L12 21l-7.682-7.682a4.5 4.5 0 010-6.364z"/>
+          </svg>
+        </div>
+
+        <p class="text-[17px] font-semibold text-gray-800">Compatibility</p>
+        <p class="text-xs text-gray-500 text-center leading-tight">
+          Love Match और Kundli Milan
+        </p>
+      </div>
+    </button>
+
+    <!-- CARD -->
+    <button class="bg-white rounded-3xl p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)] 
+                   active:scale-95 transition-all border border-gray-100">
+      <div class="flex flex-col items-center gap-3">
+
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-600 to-indigo-700 
+                    flex items-center justify-center shadow-lg text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.77 9.77 0 01-4-.8L3 21l1.8-4A7.76 7.76 0 013 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+          </svg>
+        </div>
+
+        <p class="text-[17px] font-semibold text-gray-800">Live Chat</p>
+        <p class="text-xs text-gray-500 text-center leading-tight">
+          ज्योतिषी से तुरंत बात करें
+        </p>
+      </div>
+    </button>
+
+    <!-- CARD -->
+    <button class="bg-white rounded-3xl p-5 shadow-[0_6px_16px_rgba(0,0,0,0.08)] 
+                   active:scale-95 transition-all border border-gray-100">
+      <div class="flex flex-col items-center gap-3">
+
+        <div class="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 
+                    flex items-center justify-center shadow-lg text-white">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9" fill="none"
+               viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M5 3l2 5 5 2-5 2-2 5-2-5-5-2 5-2 2-5zM19 11l1.5 3.5L24 16l-3.5 1.5L19 21l-1.5-3.5L14 16l3.5-1.5L19 11z"/>
+          </svg>
+        </div>
+
+        <p class="text-[17px] font-semibold text-gray-800">Remedies</p>
+        <p class="text-xs text-gray-500 text-center leading-tight">
+          दैनिक उपाय और दोष समाधान
+        </p>
+      </div>
+    </button>
+
+  </div>
+</div>
+
+
+
+<!-- Special Store Section -->
+<div class="mt-8 px-4">
+  <h2 class="text-2xl font-bold text-gray-900 mb-4 text-center">Special Store</h2>
+
+  <div class="grid grid-cols-2 gap-4">
+
+    <!-- Gemstones -->
+    <button class="bg-gradient-to-br from-orange-400 to-amber-500 rounded-2xl p-5 shadow-lg text-white flex flex-col items-center gap-2 hover:scale-105 active:scale-95 transition-all">
+      <span class="text-3xl">💎</span>
+      <p class="font-semibold text-lg">Gemstones</p>
+    </button>
+
+    <!-- Yantra -->
+    <button class="bg-gradient-to-br from-pink-500 to-rose-500 rounded-2xl p-5 shadow-lg text-white flex flex-col items-center gap-2 hover:scale-105 active:scale-95 transition-all">
+      <span class="text-3xl">🕉️</span>
+      <p class="font-semibold text-lg">Yantra</p>
+    </button>
+
+    <!-- Pooja -->
+    <button class="bg-gradient-to-br from-purple-600 to-indigo-600 rounded-2xl p-5 shadow-lg text-white flex flex-col items-center gap-2 hover:scale-105 active:scale-95 transition-all">
+      <span class="text-3xl">🙏</span>
+      <p class="font-semibold text-lg">Pooja</p>
+    </button>
+
+    <!-- Rudraksha -->
+    <button class="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 shadow-lg text-white flex flex-col items-center gap-2 hover:scale-105 active:scale-95 transition-all">
+      <span class="text-3xl">🪷</span>
+      <p class="font-semibold text-lg">Rudraksha</p>
+    </button>
+
+    <!-- Online Havan Booking -->
+    <button class="bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl p-5 shadow-lg text-white flex flex-col items-center gap-2 hover:scale-105 active:scale-95 transition-all col-span-2">
+      <span class="text-3xl">🔥</span>
+      <p class="font-semibold text-lg">Online Havan Booking</p>
+    </button>
+
+  </div>
+</div>
+<!-- Daily Horoscope Section -->
+<div class="mt-8 px-4">
+  <h2 class="text-2xl font-bold text-gray-900 mb-4 text-center tracking-tight">
+    Aaj Ka Rashifal ✨
+  </h2>
+
+  <!-- Swiper Slider for Zodiac -->
+  <div class="swiper myHoroscopeSlider">
+    <div class="swiper-wrapper">
+
+      <!-- Aries Card -->
+      <div class="swiper-slide">
+        <div class="bg-gradient-to-br from-orange-100 to-orange-50 rounded-3xl p-5 shadow-lg border border-orange-200">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 flex items-center justify-center bg-orange-200 rounded-full text-xl">♈</div>
+            <p class="text-lg font-bold text-orange-700">Mesh (Aries)</p>
+          </div>
+          <p class="text-sm text-gray-700 leading-relaxed mb-3">
+            🌞 Aaj aapke liye din energy aur positivity se bhara hoga. Career me naye opportunities mil sakte hain. Focus aur patience rakhen.
+          </p>
+          <div class="flex justify-between mt-2 text-sm text-gray-500">
+            <span>Luck: ⭐⭐⭐⭐☆</span>
+            <span>Health: 🟢 Good</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Taurus Card -->
+      <div class="swiper-slide">
+        <div class="bg-gradient-to-br from-green-100 to-green-50 rounded-3xl p-5 shadow-lg border border-green-200">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 flex items-center justify-center bg-green-200 rounded-full text-xl">♉</div>
+            <p class="text-lg font-bold text-green-700">Vrishabha (Taurus)</p>
+          </div>
+          <p class="text-sm text-gray-700 leading-relaxed mb-3">
+            🥛 Aaj aapke liye health aur financial stability important hai. Calm rahen aur investment me savdhani rakhen. Positive energy aayegi.
+          </p>
+          <div class="flex justify-between mt-2 text-sm text-gray-500">
+            <span>Luck: ⭐⭐⭐☆☆</span>
+            <span>Health: 🟢 Good</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Gemini Card -->
+      <div class="swiper-slide">
+        <div class="bg-gradient-to-br from-purple-100 to-purple-50 rounded-3xl p-5 shadow-lg border border-purple-200">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 flex items-center justify-center bg-purple-200 rounded-full text-xl">♊</div>
+            <p class="text-lg font-bold text-purple-700">Mithun (Gemini)</p>
+          </div>
+          <p class="text-sm text-gray-700 leading-relaxed mb-3">
+            🌿 Aaj aapke communication skills shine karenge. Relationships aur friendships me positive moments aayenge. Focus karein aur overthink na karein.
+          </p>
+          <div class="flex justify-between mt-2 text-sm text-gray-500">
+            <span>Luck: ⭐⭐⭐⭐☆</span>
+            <span>Health: 🟡 Moderate</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Pagination Dots -->
+    <div class="swiper-pagination mt-3"></div>
+  </div>
+</div>
+
+<!-- Swiper JS Init -->
+<script>
+  var swiper = new Swiper(".myHoroscopeSlider", {
+    slidesPerView: 1.05,
+    spaceBetween: 12,
+    centeredSlides: true,
+    loop: true,
+    autoplay: {
+      delay: 2800,
+      disableOnInteraction: false,
+    },
+    pagination: {
+      el: ".swiper-pagination",
+      clickable: true,
+    },
+  });
+</script>
+
+
+
+      <!-- Streak & Points -->
+    <!-- Tera Taara Score Card -->
+<div class="mt-8 bg-white rounded-3xl p-6 shadow-[0_6px_18px_rgba(0,0,0,0.08)] border border-orange-100">
+
+  <h3 class="text-2xl font-bold text-orange-600 text-center tracking-tight">
+    Tera Taara Score ✨
+  </h3>
+
+  <!-- Stats Row -->
+  <div class="grid grid-cols-3 gap-4 mt-6 text-center">
+
+    <!-- Day Streak -->
+    <div class="flex flex-col items-center">
+      <div class="w-14 h-14 bg-orange-100 rounded-2xl flex items-center justify-center text-orange-600 text-2xl font-bold shadow-inner">
+        🔥
+      </div>
+      <p class="text-xl font-bold text-gray-800 mt-2">12</p>
+      <p class="text-xs text-gray-500 mt-1">Day Streak</p>
+    </div>
+
+    <!-- Taara Points -->
+    <div class="flex flex-col items-center">
+      <div class="w-14 h-14 bg-red-100 rounded-2xl flex items-center justify-center text-red-500 text-2xl font-bold shadow-inner">
+        ⭐
+      </div>
+      <p class="text-xl font-bold text-gray-800 mt-2">356</p>
+      <p class="text-xs text-gray-500 mt-1">Taara Points</p>
+    </div>
+
+    <!-- Rohini Rank -->
+    <div class="flex flex-col items-center">
+      <div class="w-14 h-14 bg-purple-100 rounded-2xl flex items-center justify-center text-purple-600 text-2xl font-bold shadow-inner">
+        🏆
+      </div>
+      <p class="text-xl font-bold text-gray-800 mt-2">#8</p>
+      <p class="text-xs text-gray-500 mt-1">Rohini Rank</p>
+    </div>
+
+  </div>
+</div>
+
+
+    </div>
+
+    <!-- Bottom Navigation -->
+
+<div class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-gray-200 py-3 z-50 shadow-inner">
+  <div class="flex justify-around items-center">
+
+    <!-- Home -->
+    <button class="flex flex-col items-center text-orange-600">
+      <img src="https://img.icons8.com/ios-filled/50/ff6b35/home.png" class="w-7 mb-1" />
+      <span class="text-xs font-semibold">Home</span>
+      <div class="w-1 h-1 bg-orange-600 rounded-full mt-1"></div>
+    </button>
+
+    <!-- Horoscope -->
+   <button class="flex flex-col items-center text-gray-500 hover:text-orange-600 transition">
+  <svg xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 mb-1 text-orange-600" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M12 2C8.13 2 5 5.13 5 9c0 3.87 3.13 7 7 7s7-3.13 7-7c0-3.87-3.13-7-7-7zm0 12c-2.76 0-5-2.24-5-5 0-2.76 2.24-5 5-5s5 2.24 5 5c0 2.76-2.24 5-5 5z"/>
+    <circle cx="12" cy="9" r="2"/>
+  </svg>
+  <span class="text-xs font-semibold">Horoscope</span>
+</button>
+
+
+    <!-- Quick Access / Remedies (previously + FAB) -->
+    <button class="relative -top-6 w-16 h-16 rounded-full bg-gradient-to-br from-orange-400 to-red-500 flex items-center justify-center text-white text-2xl shadow-2xl hover:scale-105 transition-transform">
+      🪔
+    </button>
+
+    <!-- Chat -->
+    <button class="flex flex-col items-center text-gray-500 hover:text-orange-600 transition">
+      <img src="https://img.icons8.com/ios-filled/50/666666/chat.png" class="w-7 mb-1" />
+      <span class="text-xs font-semibold">Chat</span>
+    </button>
+
+    <!-- Profile -->
+    <button class="flex flex-col items-center text-gray-500 hover:text-orange-600 transition">
+      <img src="https://img.icons8.com/ios-filled/50/666666/user.png" class="w-7 mb-1" />
+      <span class="text-xs font-semibold">Profile</span>
+    </button>
+
+  </div>
+</div>
+
+
+
+  </div>
+
+  <script>
+    // Sidebar Toggle
+    document.getElementById("menuBtn").addEventListener("click", () => {
+      document.getElementById("sidebar").classList.add("active");
+      document.getElementById("overlay").classList.remove("hidden");
+    });
+    document.getElementById("closeBtn").onclick = document.getElementById("overlay").onclick = () => {
+      document.getElementById("sidebar").classList.remove("active");
+      document.getElementById("overlay").classList.add("hidden");
+    };
+  </script>
+
+</body>
+</html>

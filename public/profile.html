@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AstroGuru - Profile</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-orange-50 min-h-screen">
+
+  <!-- Profile Header -->
+<!-- Profile Header -->
+<div class="bg-gradient-to-br from-orange-400 to-red-500 p-6 rounded-b-3xl relative">
+  <div class="flex flex-col items-center space-y-2">
+    
+    <!-- Profile Image -->
+    <div class="relative w-24 h-24">
+      <img id="profileImage" src="/default-user.png" class="w-24 h-24 rounded-full border-4 border-white shadow-lg object-cover" />
+      <input type="file" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+      <div class="absolute bottom-0 right-0 bg-white text-orange-500 p-1 rounded-full shadow-md cursor-pointer text-sm font-bold">✎</div>
+    </div>
+
+    <!-- Name -->
+    <h2 id="profileName" class="text-white text-xl font-bold mt-2">Loading...</h2>
+
+    <!-- Zodiac Sign -->
+    <p class="text-orange-200 text-sm flex items-center gap-1">
+      <span id="zodiacSign">♈ Calculating...</span>
+    </p>
+
+    <!-- User Type -->
+    <p id="userType" class="text-orange-200 text-sm font-semibold">Loading user type...</p>
+
+    <!-- Prices (Single Line Grid) -->
+  <div id="priceSection" class="mt-4 hidden">
+  <div class="flex justify-center">
+    <table class="border-separate border-spacing-4">
+      <tr class="text-white font-semibold text-sm">
+        <td class="bg-orange-500 px-5 py-2 rounded-xl shadow-sm">1 min: ₹<span id="price1min">0</span></td>
+        <td class="bg-orange-500 px-5 py-2 rounded-xl shadow-sm">10 min: ₹<span id="price10min">0</span></td>
+        <td class="bg-orange-500 px-5 py-2 rounded-xl shadow-sm">30 min: ₹<span id="price30min">0</span></td>
+      </tr>
+    </table>
+  </div>
+</div>
+
+  </div>
+</div>
+
+
+  <br><br><br>
+
+  <!-- User Info Cards -->
+  <div class="px-4 -mt-12 space-y-4">
+
+    <div class="bg-white rounded-2xl shadow-md p-4 flex justify-between items-center">
+      <div>
+        <p class="text-gray-500 text-sm">Email</p>
+        <p id="profileEmail" class="text-gray-900 font-semibold">Loading...</p>
+      </div>
+      <button class="text-orange-500 font-semibold text-sm">Edit</button>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-md p-4 flex justify-between items-center">
+      <div>
+        <p class="text-gray-500 text-sm">Date of Birth</p>
+        <p id="profileDOB" class="text-gray-900 font-semibold">Loading...</p>
+      </div>
+      <button class="text-orange-500 font-semibold text-sm">Edit</button>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-md p-4 flex justify-between items-center">
+      <div>
+        <p class="text-gray-500 text-sm">Gender</p>
+        <p id="profileGender" class="text-gray-900 font-semibold">Loading...</p>
+      </div>
+      <button class="text-orange-500 font-semibold text-sm">Edit</button>
+    </div>
+
+  </div>
+
+  <!-- Astrology Stats -->
+  <div class="px-4 mt-4 space-y-4">
+    <h3 class="text-gray-900 font-bold text-lg mb-2">Your Astrology Stats</h3>
+
+    <div class="grid grid-cols-2 gap-4">
+      <div class="bg-white rounded-2xl shadow-md p-4 text-center">
+        <p class="text-gray-500 text-sm">Zodiac</p>
+        <p id="zodiacText" class="text-orange-600 font-bold text-lg">Loading...</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-md p-4 text-center">
+        <p class="text-gray-500 text-sm">Moon Sign</p>
+        <p id="moonSign" class="text-orange-600 font-bold text-lg">Coming Soon</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-md p-4 text-center">
+        <p class="text-gray-500 text-sm">Rashi</p>
+        <p id="rashi" class="text-orange-600 font-bold text-lg">Coming Soon</p>
+      </div>
+
+      <div class="bg-white rounded-2xl shadow-md p-4 text-center">
+        <p class="text-gray-500 text-sm">Nakshatra</p>
+        <p id="nakshatra" class="text-orange-600 font-bold text-lg">Coming Soon</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="px-4 mt-6 mb-8">
+    <button id="logoutBtn" class="w-full bg-gray-200 text-gray-700 py-3 rounded-2xl font-semibold shadow-md hover:bg-gray-300 transition">
+      Logout
+    </button>
+  </div>
+<script>
+  // Zodiac calculation based on DOB
+  function getZodiac(dob) {
+    if (!dob) return "Not Set";
+
+    let date = new Date(dob);
+    if (isNaN(date)) return "Unknown";
+
+    let m = date.getMonth() + 1;
+    let d = date.getDate();
+
+    if ((m==3 && d>=21) || (m==4 && d<=19)) return "Aries ♈";
+    if ((m==4 && d>=20) || (m==5 && d<=20)) return "Taurus ♉";
+    if ((m==5 && d>=21) || (m==6 && d<=20)) return "Gemini ♊";
+    if ((m==6 && d>=21) || (m==7 && d<=22)) return "Cancer ♋";
+    if ((m==7 && d>=23) || (m==8 && d<=22)) return "Leo ♌";
+    if ((m==8 && d>=23) || (m==9 && d<=22)) return "Virgo ♍";
+    if ((m==9 && d>=23) || (m==10 && d<=22)) return "Libra ♎";
+    if ((m==10 && d>=23) || (m==11 && d<=21)) return "Scorpio ♏";
+    if ((m==11 && d>=22) || (m==12 && d<=21)) return "Sagittarius ♐";
+    if ((m==12 && d>=22) || (m==1 && d<=19)) return "Capricorn ♑";
+    if ((m==1 && d>=20) || (m==2 && d<=18)) return "Aquarius ♒";
+    if ((m==2 && d>=19) || (m==3 && d<=20)) return "Pisces ♓";
+
+    return "Unknown";
+  }
+
+  async function loadProfile() {
+    try {
+      const res = await fetch("/api/user", { credentials: "include" });
+      if (!res.ok) return window.location.href = "/login.html";
+
+      const user = await res.json();
+
+      // Basic info
+      document.querySelector("#profileName").textContent = user.fullName || "User";
+      document.querySelector("#profileEmail").textContent = user.email || "Not set";
+      document.querySelector("#profileDOB").textContent = user.dob ? new Date(user.dob).toLocaleDateString() : "Not set";
+      document.querySelector("#profileGender").textContent = user.gender || "Not set";
+
+      // User type
+      document.querySelector("#userType").textContent = user.userType || "Not set";
+
+      // Zodiac sign
+      const zodiac = getZodiac(user.dob);
+      document.querySelector("#zodiacSign").textContent = zodiac;
+
+      // Profile image
+      if (user.profileImage) {
+        document.querySelector("#profileImage").src = "/uploads/" + user.profileImage;
+      }
+
+      // Show prices only if user is astrologer
+      if (user.userType === "astrologer" && user.prices) {
+        document.querySelector("#price1min").textContent = user.prices["1min"] + " ₹";
+        document.querySelector("#price10min").textContent = user.prices["10min"] + " ₹";
+        document.querySelector("#price30min").textContent = user.prices["30min"] + " ₹";
+        document.querySelector("#priceSection").style.display = "block";
+      } else {
+        document.querySelector("#priceSection").style.display = "none";
+      }
+
+    } catch (err) {
+      console.error("Error loading profile:", err);
+    }
+  }
+
+  // Load profile on page load
+  loadProfile();
+
+  // Logout button
+  const logoutBtn = document.querySelector("#logoutBtn");
+  if (logoutBtn) {
+    logoutBtn.addEventListener("click", async () => {
+      await fetch("/logout", { method: "POST", credentials: "include" });
+      window.location.href = "/login.html";
+    });
+  }
+</script>
+
+
+
+</body>
+</html>

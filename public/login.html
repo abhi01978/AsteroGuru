@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+          <script src="https://cdn.tailwindcss.com"></script>
+
+</head>
+<body>
+    <!-- Login Page Container -->
+<div class="min-h-screen bg-gradient-to-br from-orange-50 to-white flex flex-col justify-center px-6 py-8">
+
+  <!-- Logo / App Name -->
+  <div class="flex flex-col items-center mb-8">
+    <div class="w-20 h-20 bg-gradient-to-br from-orange-400 to-red-500 rounded-full flex items-center justify-center text-white text-3xl font-bold shadow-lg">
+      ✨
+    </div>
+    <h1 class="mt-4 text-2xl font-bold text-orange-600">AstroGuru</h1>
+    <p class="text-gray-500 text-sm mt-1 text-center">
+      Log in to continue your astrology journey
+    </p>
+  </div>
+
+ <!-- Login Form -->
+<form action="/login" method="POST" class="bg-white rounded-3xl shadow-xl p-6 flex flex-col space-y-4">
+
+  <!-- Email -->
+  <div class="flex flex-col">
+    <label class="text-gray-600 text-sm font-semibold mb-1">Email</label>
+    <input 
+      type="email" 
+      name="email"
+      placeholder="Enter your email" 
+      class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" 
+      required 
+    />
+  </div>
+
+  <!-- Password -->
+  <div class="flex flex-col">
+    <label class="text-gray-600 text-sm font-semibold mb-1">Password</label>
+    <input 
+      type="password" 
+      name="password"
+      placeholder="Enter your password" 
+      class="p-3 rounded-2xl border border-gray-200 focus:ring-2 focus:ring-orange-300 focus:outline-none" 
+      required 
+    />
+  </div>
+
+  <!-- Forgot Password -->
+  <a href="/forgot-password" class="text-sm text-orange-500 font-semibold self-end mt-1 hover:underline">
+    Forgot Password?
+  </a>
+
+  <!-- Login Button -->
+  <button type="submit" class="mt-4 w-full bg-gradient-to-br from-orange-400 to-red-500 text-white py-3 rounded-2xl font-bold shadow-lg hover:scale-105 transition-transform">
+    Log In
+  </button>
+
+  <!-- OR Divider -->
+  <div class="flex items-center my-2">
+    <hr class="flex-grow border-gray-300" />
+    <span class="mx-2 text-gray-400 text-sm">OR</span>
+    <hr class="flex-grow border-gray-300" />
+  </div>
+
+  <!-- Social Login Buttons -->
+  <div class="flex space-x-4">
+    <button class="flex-1 flex items-center justify-center py-2.5 rounded-2xl border border-gray-200 hover:bg-gray-50 transition">
+      <img src="https://img.icons8.com/color/48/000000/google-logo.png" class="w-6 h-6 mr-2" />
+      Google
+    </button>
+    <button class="flex-1 flex items-center justify-center py-2.5 rounded-2xl border border-gray-200 hover:bg-gray-50 transition">
+      <img src="https://img.icons8.com/ios-filled/50/000000/apple-logo.png" class="w-6 h-6 mr-2" />
+      Apple
+    </button>
+  </div>
+
+  <!-- Sign up link -->
+  <p class="text-center text-gray-500 text-sm mt-4">
+    Don't have an account? <a href="/signup" class="text-orange-500 font-semibold">Sign Up</a>
+  </p>
+
+</form>
+
+</div>
+<script>
+const form = document.querySelector("form");
+form.addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const res = await fetch("/login", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      email: form.email.value,
+      password: form.password.value
+    })
+  });
+
+  const data = await res.json();
+
+  if(data.success) {
+    // login successful → redirect to profile
+    window.location.href = "/profile";
+  } else {
+    // show error
+    alert(data.error);
+  }
+});
+</script>
+
+    
+</body>
+</html>

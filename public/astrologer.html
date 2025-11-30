@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Astrologers Chat - AstroGuru</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-app.js";
+  import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js";
+
+  // STEP 1: Firebase Config server se dynamically lo (koi key nahi yahan!)
+  const configRes = await fetch("/api/firebase-config");
+  const firebaseConfig = await configRes.json();
+
+  const app = initializeApp(firebaseConfig);
+  const messaging = getMessaging(app);
+
+  // STEP 2: VAPID Key bhi server se lo (zero hardcode!)
+  const vapidRes = await fetch("/api/vapid-key");
+  const { vapidKey } = await vapidRes.json();
+
+  // Service Worker register + Token save
+  async function setupPushNotifications() {
+    try {
+      const registration = await navigator.serviceWorker.register("/firebase-messaging-sw.js");
+      console.log("Service Worker Registered");
+
+      const token = await getToken(messaging, {
+        vapidKey,
+        serviceWorkerRegistration: registration
+      });
+
+      if (token) {
+        await fetch("/api/save-fcm-token", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ token })
+        });
+        console.log("FCM Token Saved Securely:", token);
+      }
+    } catch (err) {
+      console.error("Push Setup Failed:", err);
+    }
+  }
+
+  // Foreground Messages
+  onMessage(messaging, (payload) => {
+    console.log("Message received (foreground):", payload);
+
+    const title = payload.data?.title || payload.notification?.title || "New Message";
+    const body = payload.data?.body || payload.notification?.body || "Tap to open chat";
+
+    // Custom toast
+    const toast = document.createElement("div");
+    toast.className = "fixed top-20 right-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 animate-pulse";
+    toast.innerHTML = `<strong>${title}</strong><br>${body}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 5000);
+
+    // Browser notification
+    new Notification(title, {
+      body,
+      icon: "/logo192.png",
+      tag: "astroguru-chat"
+    });
+  });
+
+  // Permission + Start
+  if ("Notification" in window && "serviceWorker" in navigator) {
+    Notification.requestPermission().then(permission => {
+      if (permission === "granted") {
+        setupPushNotifications();
+      }
+    });
+  }
+</script>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging-compat.js"></script>
+
+  <style>
+    .toast { animation: slideIn 0.5s, slideOut 0.5s 4.5s forwards; }
+    @keyframes slideIn { from {transform: translateX(100%);} to {transform: translateX(0);} }
+    @keyframes slideOut { from {transform: translateX(0);} to {transform: translateX(100%);} }
+  </style>
+</head>
+<body class="bg-orange-50">
+
+  <div class="bg-white shadow-md py-4 px-4 flex items-center justify-between sticky top-0 z-50">
+    <h1 class="text-xl font-bold text-orange-600">Astrologers</h1>
+    <button class="text-gray-600 hover:text-orange-600 text-2xl">Search</button>
+  </div>
+
+  <div id="astrologersList" class="px-4 mt-4 space-y-4">
+    <p class="text-center text-gray-500">Loading astrologers...</p>
+  </div>
+
+  <!-- Chat Box -->
+  <div id="chatBox" class="fixed bottom-4 right-4 w-96 bg-white rounded-3xl shadow-2xl hidden flex flex-col h-[520px] z-50 overflow-hidden">
+    <div class="bg-gradient-to-r from-orange-500 to-pink-600 text-white p-4 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <img id="chatProfileImg" src="" class="w-10 h-10 rounded-full border-2 border-white object-cover">
+        <p id="chatUserName" class="font-bold">Astrologer</p>
+      </div>
+      <button onclick="closeChat()" class="text-3xl">&times;</button>
+    </div>
+    <div id="chatMessages" class="flex-1 p-4 overflow-y-auto bg-gray-50"></div>
+    <div class="p-4 border-t flex gap-2 bg-white">
+      <input id="chatInput" type="text" placeholder="Type your message..." 
+             class="flex-1 px-4 py-2 border rounded-full focus:outline-none focus:ring-2 focus:ring-orange-400">
+      <button onclick="sendMessage()" 
+              class="bg-orange-500 hover:bg-orange-600 text-white px-6 py-2 rounded-full font-bold transition">
+        Send
+      </button>
+    </div>
+  </div>
+
+  <script>
+    let socket;
+    let currentAstrologer = null;
+    let userId = null;
+
+   
+
+    // === FCM TOKEN SAVE ===
+    async function initializePushNotifications() {
+      try {
+        const permission = await Notification.requestPermission();
+        if (permission === "granted") {
+          const token = await messaging.getToken({
+            vapidKey: "BKgrJTz4gFHA_eMTQKxltSaqL3yr9YIcsHk6t8zviNaNG4-0ENcv7n8znT91BUFmqpqYaJS2jWzsQRHCUz8FV9A"
+          });
+          if (token) {
+            await fetch("/api/save-fcm-token", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              credentials: "include",
+              body: JSON.stringify({ token })
+            });
+            console.log("FCM Token Saved:", token);
+          }
+        }
+      } catch (err) {
+        console.error("FCM Error:", err);
+      }
+    }
+
+    // === INIT APP ===
+    async function init() {
+      try {
+        const res = await fetch("/api/user", { credentials: "include" });
+        if (!res.ok) return window.location.href = "/login";
+
+        const user = await res.json();
+        userId = user._id;
+
+        socket = io();
+        socket.emit("register", userId);
+
+        initializePushNotifications();
+
+        socket.on("chatMessage", (data) => {
+          if (data.from === userId) {
+            if (currentAstrologer?._id === data.to) appendMessage(data.message, "right");
+            return;
+          }
+
+          const senderName = data.fromName || "Astrologer";
+          if (currentAstrologer?._id === data.from) {
+            appendMessage(data.message, "left");
+            playNotificationSound();
+          } else {
+            showNotification(senderName, data.message);
+            updateAstrologerBadge(data.from);
+            playNotificationSound();
+          }
+        });
+
+        // SABSE ZAROORI: ASTROLOGERS LOAD KARO!
+        await loadAstrologers();
+
+      } catch (err) {
+        console.error("Init failed:", err);
+      }
+    }
+
+    // === LOAD ASTROLOGERS (100% WORKING) ===
+   // === LOAD ASTROLOGERS (WITH EXPERIENCE + PRICE) ===
+async function loadAstrologers() {
+  try {
+    const res = await fetch("/api/astrologers");
+    const list = await res.json();
+    const container = document.getElementById("astrologersList");
+    container.innerHTML = "";
+
+    if (!list || list.length === 0) {
+      container.innerHTML = "<p class='text-center text-gray-600 py-10'>No astrologers available right now.</p>";
+      return;
+    }
+
+    list.forEach(astro => {
+      const card = document.createElement("div");
+      card.setAttribute("data-astro-id", astro._id);
+      card.className = "bg-white rounded-3xl shadow-lg p-6 hover:shadow-2xl transition-all duration-300 border border-orange-100";
+
+      // Experience calculate karo agar field nahi hai
+      const exp = astro.experience 
+        ? `${astro.experience} years` 
+        : astro.createdAt 
+          ? `${Math.floor((Date.now() - new Date(astro.createdAt)) / (31536000000))} years+`
+          : "5+ years";
+
+      card.innerHTML = `
+        <div class="flex justify-between items-start">
+          <div class="flex items-center gap-5">
+            <img src="${astro.profileImage ? '/uploads/' + astro.profileImage : 'https://via.placeholder.com/80'}" 
+                 class="w-20 h-20 rounded-full object-cover border-4 border-orange-400 shadow-lg">
+            <div>
+              <h3 class="text-xl font-bold text-gray-800">${astro.fullName}</h3>
+              <p class="text-sm text-gray-600">${astro.expertise || "Vedic Astrologer"}</p>
+              <p class="text-xs text-orange-600 font-semibold mt-1">Experience: ${exp}</p>
+            </div>
+          </div>
+          <button class="relative bg-gradient-to-r from-orange-500 to-pink-600 text-white font-bold py-3 px-8 rounded-full hover:scale-110 transition transform">
+            Chat Now
+          </button>
+        </div>
+
+        <!-- Price Tags (Agar prices set hain to dikhao) -->
+        ${astro.prices && Object.keys(astro.prices).length > 0 ? `
+          <div class="flex flex-wrap gap-2 mt-4">
+            ${Object.entries(astro.prices)
+              .map(([duration, price]) => `
+                <span class="bg-orange-100 text-orange-700 px-4 py-2 rounded-full text-sm font-bold">
+                  ${duration} → ₹${price}
+                </span>
+              `).join("")}
+          </div>
+        ` : `
+          <div class="mt-4">
+            <span class="text-gray-500 text-sm italic">Consultation charges coming soon...</span>
+          </div>
+        `}
+      `;
+
+      card.querySelector("button").onclick = () => openChat(astro);
+      container.appendChild(card);
+    });
+  } catch (err) {
+    console.error("Failed to load astrologers:", err);
+  }
+}
+
+    // === UI FUNCTIONS ===
+    function appendMessage(text, side = "left") {
+      const container = document.getElementById("chatMessages");
+      const div = document.createElement("div");
+      div.className = `self-${side === "left" ? "start" : "end"} max-w-xs px-4 py-3 rounded-2xl mb-3 shadow-md ${side === "left" ? "bg-white text-gray-900" : "bg-orange-200 text-orange-900"}`;
+      const time = new Date().toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+      div.innerHTML = `<div class="font-medium">${text}</div><div class="text-xs opacity-60 mt-1">${time}</div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function showNotification(title, body) {
+      const toast = document.createElement("div");
+      toast.className = "toast fixed top-20 right-4 bg-gradient-to-r from-purple-600 to-indigo-600 text-white px-6 py-4 rounded-2xl shadow-2xl z-50 max-w-sm";
+      toast.innerHTML = `<strong>${title}:</strong> ${body.substring(0, 45)}...`;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 5000);
+
+      if (Notification.permission === "granted") {
+        new Notification("AstroGuru", {
+          body: `${title}: ${body}`,
+          icon: "https://img.icons8.com/fluency/96/astrology.png",
+          tag: "chat-message"
+        });
+      }
+    }
+
+    function playNotificationSound() {
+      new Audio("https://assets.mixkit.co/sfx/preview/mixkit-software-interface-notification-2583.mp3").play().catch(() => {});
+    }
+
+    function updateAstrologerBadge(senderId) {
+      const card = document.querySelector(`#astrologersList div[data-astro-id="${senderId}"]`);
+      if (!card) return;
+      const btn = card.querySelector("button");
+      if (!btn || btn.querySelector(".badge")) return;
+      const badge = document.createElement("span");
+      badge.className = "badge absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center animate-pulse";
+      badge.textContent = "!";
+      btn.style.position = "relative";
+      btn.appendChild(badge);
+    }
+
+    function openChat(astro) {
+      currentAstrologer = astro;
+      document.getElementById("chatBox").classList.remove("hidden");
+      document.getElementById("chatUserName").textContent = astro.fullName;
+      document.getElementById("chatProfileImg").src = astro.profileImage ? `/uploads/${astro.profileImage}` : "https://via.placeholder.com/64";
+      document.getElementById("chatMessages").innerHTML = "";
+      document.getElementById("chatInput").focus();
+
+      const badge = document.querySelector(`#astrologersList div[data-astro-id="${astro._id}"] .badge`);
+      if (badge) badge.remove();
+    }
+
+    function closeChat() {
+      document.getElementById("chatBox").classList.add("hidden");
+      currentAstrologer = null;
+    }
+
+    function sendMessage() {
+      const input = document.getElementById("chatInput");
+      const msg = input.value.trim();
+      if (!msg || !currentAstrologer) return;
+
+      appendMessage(msg, "right");
+      socket.emit("chatMessage", { to: currentAstrologer._id, from: userId, message: msg });
+      input.value = "";
+    }
+
+    document.getElementById("chatInput")?.addEventListener("keypress", e => {
+      if (e.key === "Enter") { e.preventDefault(); sendMessage(); }
+    });
+
+    // === START ===
+    init();
+
+    // === SERVICE WORKER ===
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/firebase-messaging-sw.js")
+        .then(() => console.log("Service Worker Registered"))
+        .catch(err => console.log("SW Error:", err));
+    }
+  </script>
+</body>
+</html>
