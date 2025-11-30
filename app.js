@@ -55,9 +55,11 @@ app.use(session({
   secret: "astro-secret-123",
   resave: false,
   saveUninitialized: true,
-  cookie: { secure: false, maxAge: 24 * 60 * 60 * 1000 }
+  cookie: { 
+    secure: process.env.NODE_ENV === "production", 
+    maxAge: 24 * 60 * 60 * 1000 
+  }
 }));
-
 // ================ MONGODB ================
 
 mongoose.connect(process.env.MONGO_URI)
@@ -357,5 +359,6 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
