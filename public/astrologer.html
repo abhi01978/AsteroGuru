@@ -11,14 +11,14 @@
   import { getMessaging, getToken, onMessage } from "https://www.gstatic.com/firebasejs/10.7.0/firebase-messaging.js";
 
   // STEP 1: Firebase Config server se dynamically lo (koi key nahi yahan!)
-  const configRes = await fetch("/api/firebase-config");
+  const configRes = await fetch("https://asteroguru.onrender.com/api/firebase-config");
   const firebaseConfig = await configRes.json();
 
   const app = initializeApp(firebaseConfig);
   const messaging = getMessaging(app);
 
   // STEP 2: VAPID Key bhi server se lo (zero hardcode!)
-  const vapidRes = await fetch("/api/vapid-key");
+  const vapidRes = await fetch("https://asteroguru.onrender.com/api/vapid-key");
   const { vapidKey } = await vapidRes.json();
 
   // Service Worker register + Token save
@@ -33,7 +33,7 @@
       });
 
       if (token) {
-        await fetch("/api/save-fcm-token", {
+        await fetch("https://asteroguru.onrender.com/api/save-fcm-token", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           credentials: "include",
@@ -134,7 +134,7 @@
             vapidKey: "BKgrJTz4gFHA_eMTQKxltSaqL3yr9YIcsHk6t8zviNaNG4-0ENcv7n8znT91BUFmqpqYaJS2jWzsQRHCUz8FV9A"
           });
           if (token) {
-            await fetch("/api/save-fcm-token", {
+            await fetch("https://asteroguru.onrender.com/api/save-fcm-token", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               credentials: "include",
@@ -191,7 +191,7 @@
    // === LOAD ASTROLOGERS (WITH EXPERIENCE + PRICE) ===
 async function loadAstrologers() {
   try {
-    const res = await fetch("/api/astrologers");
+    const res = await fetch("https://asteroguru.onrender.com/api/astrologers");
     const list = await res.json();
     const container = document.getElementById("astrologersList");
     container.innerHTML = "";
@@ -339,4 +339,5 @@ async function loadAstrologers() {
     }
   </script>
 </body>
+
 </html>
