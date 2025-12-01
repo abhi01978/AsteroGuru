@@ -207,7 +207,6 @@ io.on("connection", (socket) => {
   });
 
   // ================ NEW MESSAGE ================
-// ================ NEW MESSAGE (FULLY FIXED VERSION) ================
 socket.on("chatMessage", async ({ to, from, message }) => {
   if (!to || !from || !message?.trim()) return;
 
@@ -229,65 +228,61 @@ socket.on("chatMessage", async ({ to, from, message }) => {
 
     const receiverSocketId = onlineUsers[to];
 
-    // Agar receiver online hai → real-time Socket.IO se bhejo
+    // 1. Agar receiver online hai → Socket.IO se real-time bhejo
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("chatMessage", messageData);
       savedMessage.seen = true;
       await savedMessage.save();
     } 
-    // Agar offline hai → FCM se DATA MESSAGE only bhejo (sabse reliable)
+    // 2. Agar receiver OFFLINE hai → PURE DATA MESSAGE bhejo (100% reliable)
     else {
-      const receiver = await User.findById(to);
+      const receiver = await User.findById(to).select("fullName fcmToken");
       if (receiver?.fcmToken) {
         try {
-          const payload = {
+          await admin.messaging().send({
             token: receiver.fcmToken,
-            data: {  // ← Sirf data payload (best practice 2025)
+            data: {
               title: `New Message from ${populatedMessage.from.fullName}`,
-              body: message.trim().substring(0, 100) + (message.trim().length > 100 ? "..." : ""),
-              url: "https://asteroguru.onrender.com/astrologer",
-              click_action: "OPEN_CHAT_ACTIVITY"
+              body: message.trim().substring(0, 120) + (message.trim().length > 120 ? "..." : ""),
+              url: "https://asteroguru.onrender.com/astrologer"
             },
             android: {
               priority: "high",
+              ttl: 240, // 4 minutes max (FCM best practice for chat)
               notification: {
                 channelId: "mystudy_channel",
-                sound: "default",
-                clickAction: "OPEN_CHAT_ACTIVITY",
                 defaultSound: true,
+                defaultVibrateSettings: true,
                 visibility: "private"
               }
             },
             apns: {
+              headers: { "apns-priority": "10" },
               payload: {
                 aps: {
                   sound: "default",
-                  badge: 1,
-                  category: "MESSAGE_CATEGORY"
+                  badge: 1
                 }
               }
             }
-          };
+          });
 
-          await admin.messaging().send(payload);
-          console.log(`FCM Data Message sent to ${receiver.fullName} (User was offline)`);
-
+          console.log(`FCM Notification sent to ${receiver.fullName} (Offline)`);
         } catch (error) {
-          console.error("FCM Send Failed:", error.message);
+          console.error("FCM Error:", error.code || error.message);
 
-          // Token invalid ya expired → DB se hata do
-          if (error.code === 'messaging/registration-token-not-registered' ||
-              error.code === 'messaging/invalid-registration-token') {
+          // Invalid/expired token → DB se hata do
+          if (error.code?.includes("registration-token")) {
             await User.findByIdAndUpdate(to, { $unset: { fcmToken: 1 } });
-            console.log("Invalid FCM token removed for user:", to);
+            console.log("Invalid FCM token removed:", to);
           }
         }
       } else {
-        console.log("Receiver has no FCM token");
+        console.log("No FCM token for offline user:", to);
       }
     }
 
-    // Sender ko bhi message dikhao (apna message right side pe)
+    // 3. Sender ko bhi apna message dikhao (right side)
     const senderSocketId = onlineUsers[from];
     if (senderSocketId) {
       io.to(senderSocketId).emit("chatMessage", messageData);
@@ -298,17 +293,16 @@ socket.on("chatMessage", async ({ to, from, message }) => {
   }
 });
 
-  socket.on("disconnect", () => {
-    for (const userId in onlineUsers) {
-      if (onlineUsers[userId] === socket.id) {
-        console.log(`User ${userId} went offline`);
-        delete onlineUsers[userId];
-        break;
-      }
+// Disconnect handler (bilkul clean)
+socket.on("disconnect", () => {
+  for (const userId in onlineUsers) {
+    if (onlineUsers[userId] === socket.id) {
+      console.log(`User ${userId} went offline`);
+      delete onlineUsers[userId];
+      break;
     }
-  });
+  }
 });
-
 
 
 // Dynamic Service Worker – secrets bilkul nahi jayenge GitHub pe
@@ -390,6 +384,7 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
 
