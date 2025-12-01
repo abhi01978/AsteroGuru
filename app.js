@@ -237,23 +237,30 @@ io.on("connection", (socket) => {
         const receiver = await User.findById(to);
         if (receiver?.fcmToken) {
           await admin.messaging().send({
-            token: receiver.fcmToken,
-            notification: {
-              title: `New Message from ${populatedMessage.from.fullName}`,
-              body: message.substring(0, 100)
-            },
-            data: {
-              type: "chat",
-              fromName: populatedMessage.from.fullName,
-              message: message,
-              url: "https://localhost:3000/astrologer" // ya tumhari site ka URL
-            },
-            webpush: {
-              fcm_options: {
-                link: "https://localhost:3000/astrologer"
-              }
-            }
-          });
+  token: receiver.fcmToken,
+  notification: {
+    title: `New Message from ${populatedMessage.from.fullName}`,
+    body: message.substring(0, 100) + (message.length > 100 ? "..." : "")
+  },
+  data: {
+    type: "chat",
+    fromName: populatedMessage.from.fullName,
+    message: message,
+    url: "https://asteroguru.onrender.com/astrologer"  // ← YE DAAL
+  },
+  android: {
+    priority: "high",
+    notification: {
+      sound: "default",
+      clickAction: "FLUTTER_NOTIFICATION_CLICK"  // optional lekin better
+    }
+  },
+  webpush: {
+    fcm_options: {
+      link: "https://asteroguru.onrender.com/astrologer"  // ← YE BHI DAAL
+    }
+  }
+});
           console.log(`Push notification sent to ${receiver.fullName}`);
         }
       }
@@ -361,6 +368,7 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
 
