@@ -235,34 +235,33 @@ io.on("connection", (socket) => {
       } else {
         // OFFLINE → Send via FCM Push Notification
         const receiver = await User.findById(to);
-        if (receiver?.fcmToken) {
-       await admin.messaging().send({
-  token: receiver.fcmToken,
-  notification: {
-    title: `New Message from ${populatedMessage.from.fullName}`,
-    body: message.substring(0, 100) + (message.length > 100 ? "..." : "")
-  },
-  data: {
-    url: "https://asteroguru.onrender.com/astrologer"
-  },
-  android: {
-    priority: "high",
-    notification: {
-      sound: "default",
-      channelId: "mystudy_channel"   // ← YE ZAROORI HAI!
-    }
-  },
-  apns: {
-    payload: {
-      aps: {
-        sound: "default"
-      }
-    }
-  }
-});
-          console.log(`Push notification sent to ${receiver.fullName}`);
+    if (receiver?.fcmToken) {
+  try {
+    await admin.messaging().send({
+      token: receiver.fcmToken,
+      notification: {
+        title: `New Message from ${populatedMessage.from.fullName}`,
+        body: message.substring(0, 100) + (message.length > 100 ? "..." : "")
+      },
+      data: {
+        url: "https://asteroguru.onrender.com/astrologer"
+      },
+      android: {
+        priority: "high",
+        notification: {
+          sound: "default",
+          channelId: "mystudy_channel"   // ← YE DAAL
         }
       }
+    });
+    console.log(`FCM Push sent to ${receiver.fullName}`);
+  } catch (error) {
+    console.error("FCM Error:", error.message);
+    if (error.code === 'messaging/registration-token-not-registered') {
+      await User.findByIdAndUpdate(to, { fcmToken: null });
+    }
+  }
+}
 
       // Sender ko bhi message dikhao
       const senderSocketId = onlineUsers[from];
@@ -367,6 +366,7 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
 
