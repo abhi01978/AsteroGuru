@@ -85,30 +85,81 @@ app.get("/signup", (req, res) => res.sendFile(path.join(__dirname, "public", "si
 app.get("/login", (req, res) => res.sendFile(path.join(__dirname, "public", "login.html")));
 app.get("/profile", isAuth, (req, res) => res.sendFile(path.join(__dirname, "public", "profile.html")));
 app.get("/astrologer", isAuth, (req, res) => res.sendFile(path.join(__dirname, "public", "astrologer.html")));
-
-// ================ LOGIN (unchanged) ================
-app.post("/login", async (req, res) => {
+// ---------------- SIGNUP ----------------
+app.post("/signup", upload.single("profileImage"), async (req, res) => {
   try {
-    const { email, password } = req.body;
-    const user = await User.findOne({ email });
-    if (!user) return res.status(404).json({ error: "User not found!" });
-
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(401).json({ error: "Incorrect password!" });
-
-    req.session.userId = user._id;
-    req.session.userType = user.userType;
-
-    req.session.save(err => {
-      if (err) return res.status(500).json({ error: "Session error" });
-      res.json({ success: true });
-    });
+    const { fullName, email, password, dob, gender, userType, price1min, price10min, price30min, experience } = req.body;
+    if (!fullName || !email || !password || !dob || !gender || !userType) return res.status(400).send("❌ All fields required!");
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(400).send("❌ Email already registered!");
+    const hashedPass = await bcrypt.hash(password, 10);
+    const newUserData = { fullName, email, password: hashedPass, dob, gender, userType, profileImage: req.file ? req.file.filename : null };
+    if (userType === "astrologer") {
+      newUserData.prices = { "1min": Number(price1min || 0), "10min": Number(price10min || 0), "30min": Number(price30min || 0) };
+      newUserData.experience = Number(experience || 0);
+    }
+    const newUser = new User(newUserData);
+    await newUser.save();
+    res.status(201).send("🎉 Signup Successful! Now login.");
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Server error" });
+    res.status(500).send("❌ Server Error");
   }
 });
 
+app.post("/signup", upload.single("profileImage"), async (req, res) => {
+  try {
+    const { fullName, email, password, dob, gender, userType, price1min, price10min, price30min, experience } = req.body;
+    if (!fullName || !email || !password || !dob || !gender || !userType) return res.status(400).send("❌ All fields required!");
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(400).send("❌ Email already registered!");
+    const hashedPass = await bcrypt.hash(password, 10);
+    const newUserData = { fullName, email, password: hashedPass, dob, gender, userType, profileImage: req.file ? req.file.filename : null };
+    if (userType === "astrologer") {
+      newUserData.prices = { "1min": Number(price1min || 0), "10min": Number(price10min || 0), "30min": Number(price30min || 0) };
+      newUserData.experience = Number(experience || 0);
+    }
+    const newUser = new User(newUserData);
+    await newUser.save();
+    res.status(201).send("🎉 Signup Successful! Now login.");
+  } catch (err) {
+    console.error(err);
+    res.status(500).send("❌ Server Error");
+  }
+});
+
+// ================ LOGIN (unchanged) ================
+// ================ LOGIN (FCM Token Handling Added) ================
+app.post("/login", async (req, res) => {
+  try {
+    const { email, password, fcmToken } = req.body; // <-- fcmToken ko accept kiya
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "User not found!" });
+
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ error: "Incorrect password!" });
+
+    // 1. Session Setup
+    req.session.userId = user._id;
+    req.session.userType = user.userType;
+    
+    // 2. FCM Token Update (Agar token body mein bheja gaya hai)
+    if (fcmToken) {
+        // Token ko database mein save kiya
+        await User.findByIdAndUpdate(user._id, { fcmToken: fcmToken });
+        console.log(`FCM Token updated during login for user: ${user._id}`);
+    }
+
+    // 3. Save Session and Respond
+    req.session.save(err => {
+      if (err) return res.status(500).json({ error: "Session error" });
+      res.json({ success: true, userId: user._id }); // Optional: userId return kiya
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 // ================ GET ALL ASTROLOGERS ================
 app.get("/api/astrologers", async (req, res) => {
   try {
@@ -358,6 +409,7 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
 
