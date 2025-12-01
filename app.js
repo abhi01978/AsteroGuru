@@ -207,72 +207,71 @@ io.on("connection", (socket) => {
   });
 
   // ================ NEW MESSAGE ================
-  socket.on("chatMessage", async ({ to, from, message }) => {
-    if (!to || !from || !message?.trim()) return;
+ socket.on("chatMessage", async ({ to, from, message }) => {
+  if (!to || !from || !message?.trim()) return;
 
-    try {
-      const savedMessage = new Message({ from, to, message: message.trim() });
+  try {                                   // ← THIS WAS MISSING!
+    const savedMessage = new Message({ from, to, message: message.trim() });
+    await savedMessage.save();
+
+    const populatedMessage = await Message.findById(savedMessage._id)
+      .populate("from", "fullName profileImage");
+
+    const messageData = {
+      from: populatedMessage.from._id.toString(),
+      fromName: populatedMessage.from.fullName,
+      fromImage: populatedMessage.from.profileImage || null,
+      message: populatedMessage.message,
+      timestamp: populatedMessage.timestamp
+    };
+
+    const receiverSocketId = onlineUsers[to];
+    if (receiverSocketId) {
+      io.to(receiverSocketId).emit("chatMessage", messageData);
+      savedMessage.seen = true;
       await savedMessage.save();
-
-      const populatedMessage = await Message.findById(savedMessage._id)
-        .populate("from", "fullName profileImage");
-
-      const messageData = {
-        from: populatedMessage.from._id.toString(),
-        fromName: populatedMessage.from.fullName,
-        fromImage: populatedMessage.from.profileImage || null,
-        message: populatedMessage.message,
-        timestamp: populatedMessage.timestamp
-      };
-
-      const receiverSocketId = onlineUsers[to];
-
-      if (receiverSocketId) {
-        // ONLINE → Send via Socket.IO
-        io.to(receiverSocketId).emit("chatMessage", messageData);
-        savedMessage.seen = true;
-        await savedMessage.save();
-      } else {
-        // OFFLINE → Send via FCM Push Notification
-        const receiver = await User.findById(to);
-    if (receiver?.fcmToken) {
-  try {
-    await admin.messaging().send({
-      token: receiver.fcmToken,
-      notification: {
-        title: `New Message from ${populatedMessage.from.fullName}`,
-        body: message.substring(0, 100) + (message.length > 100 ? "..." : "")
-      },
-      data: {
-        url: "https://asteroguru.onrender.com/astrologer"
-      },
-      android: {
-        priority: "high",
-        notification: {
-          sound: "default",
-          channelId: "mystudy_channel"   // ← YE DAAL
+    } else {
+      // OFFLINE → Send via FCM
+      const receiver = await User.findById(to);
+      if (receiver?.fcmToken) {
+        try {
+          await admin.messaging().send({
+            token: receiver.fcmToken,
+            notification: {
+              title: `New Message from ${populatedMessage.from.fullName}`,
+              body: message.substring(0, 100) + (message.length > 100 ? "..." : "")
+            },
+            data: {
+              url: "https://asteroguru.onrender.com/astrologer"
+            },
+            android: {
+              priority: "high",
+              notification: {
+                sound: "default",
+                channelId: "mystudy_channel"
+              }
+            }
+          });
+          console.log(`FCM Push sent to ${receiver.fullName}`);
+        } catch (error) {
+          console.error("FCM Error:", error.message);
+          if (error.code === 'messaging/registration-token-not-registered') {
+            await User.findByIdAndUpdate(to, { fcmToken: null });
+          }
         }
       }
-    });
-    console.log(`FCM Push sent to ${receiver.fullName}`);
-  } catch (error) {
-    console.error("FCM Error:", error.message);
-    if (error.code === 'messaging/registration-token-not-registered') {
-      await User.findByIdAndUpdate(to, { fcmToken: null });
     }
+
+    // Send to sender too
+    const senderSocketId = onlineUsers[from];
+    if (senderSocketId) {
+      io.to(senderSocketId).emit("chatMessage", messageData);
+    }
+
+  } catch (err) {                        // ← Now this catch is valid
+    console.error("Error in chatMessage handler:", err);
   }
-}
-
-      // Sender ko bhi message dikhao
-      const senderSocketId = onlineUsers[from];
-      if (senderSocketId) {
-        io.to(senderSocketId).emit("chatMessage", messageData);
-      }
-
-    } catch (err) {
-      console.error("Error in chatMessage handler:", err);
-    }
-  });
+});
 
   socket.on("disconnect", () => {
     for (const userId in onlineUsers) {
@@ -366,6 +365,7 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
 
