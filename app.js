@@ -207,10 +207,12 @@ io.on("connection", (socket) => {
   });
 
   // ================ NEW MESSAGE ================
- socket.on("chatMessage", async ({ to, from, message }) => {
+// ================ NEW MESSAGE (FULLY FIXED VERSION) ================
+socket.on("chatMessage", async ({ to, from, message }) => {
   if (!to || !from || !message?.trim()) return;
 
-  try {                                   // ← THIS WAS MISSING!
+  try {
+    // Save message in DB
     const savedMessage = new Message({ from, to, message: message.trim() });
     await savedMessage.save();
 
@@ -226,49 +228,72 @@ io.on("connection", (socket) => {
     };
 
     const receiverSocketId = onlineUsers[to];
+
+    // Agar receiver online hai → real-time Socket.IO se bhejo
     if (receiverSocketId) {
       io.to(receiverSocketId).emit("chatMessage", messageData);
       savedMessage.seen = true;
       await savedMessage.save();
-    } else {
-      // OFFLINE → Send via FCM
+    } 
+    // Agar offline hai → FCM se DATA MESSAGE only bhejo (sabse reliable)
+    else {
       const receiver = await User.findById(to);
       if (receiver?.fcmToken) {
         try {
-          await admin.messaging().send({
+          const payload = {
             token: receiver.fcmToken,
-            notification: {
+            data: {  // ← Sirf data payload (best practice 2025)
               title: `New Message from ${populatedMessage.from.fullName}`,
-              body: message.substring(0, 100) + (message.length > 100 ? "..." : "")
-            },
-            data: {
-              url: "https://asteroguru.onrender.com/astrologer"
+              body: message.trim().substring(0, 100) + (message.trim().length > 100 ? "..." : ""),
+              url: "https://asteroguru.onrender.com/astrologer",
+              click_action: "OPEN_CHAT_ACTIVITY"
             },
             android: {
               priority: "high",
               notification: {
+                channelId: "mystudy_channel",
                 sound: "default",
-                channelId: "mystudy_channel"
+                clickAction: "OPEN_CHAT_ACTIVITY",
+                defaultSound: true,
+                visibility: "private"
+              }
+            },
+            apns: {
+              payload: {
+                aps: {
+                  sound: "default",
+                  badge: 1,
+                  category: "MESSAGE_CATEGORY"
+                }
               }
             }
-          });
-          console.log(`FCM Push sent to ${receiver.fullName}`);
+          };
+
+          await admin.messaging().send(payload);
+          console.log(`FCM Data Message sent to ${receiver.fullName} (User was offline)`);
+
         } catch (error) {
-          console.error("FCM Error:", error.message);
-          if (error.code === 'messaging/registration-token-not-registered') {
-            await User.findByIdAndUpdate(to, { fcmToken: null });
+          console.error("FCM Send Failed:", error.message);
+
+          // Token invalid ya expired → DB se hata do
+          if (error.code === 'messaging/registration-token-not-registered' ||
+              error.code === 'messaging/invalid-registration-token') {
+            await User.findByIdAndUpdate(to, { $unset: { fcmToken: 1 } });
+            console.log("Invalid FCM token removed for user:", to);
           }
         }
+      } else {
+        console.log("Receiver has no FCM token");
       }
     }
 
-    // Send to sender too
+    // Sender ko bhi message dikhao (apna message right side pe)
     const senderSocketId = onlineUsers[from];
     if (senderSocketId) {
       io.to(senderSocketId).emit("chatMessage", messageData);
     }
 
-  } catch (err) {                        // ← Now this catch is valid
+  } catch (err) {
     console.error("Error in chatMessage handler:", err);
   }
 });
@@ -365,6 +390,7 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
 
