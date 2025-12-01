@@ -236,28 +236,27 @@ io.on("connection", (socket) => {
         // OFFLINE → Send via FCM Push Notification
         const receiver = await User.findById(to);
         if (receiver?.fcmToken) {
-          await admin.messaging().send({
+       await admin.messaging().send({
   token: receiver.fcmToken,
   notification: {
     title: `New Message from ${populatedMessage.from.fullName}`,
     body: message.substring(0, 100) + (message.length > 100 ? "..." : "")
   },
   data: {
-    type: "chat",
-    fromName: populatedMessage.from.fullName,
-    message: message,
-    url: "https://asteroguru.onrender.com/astrologer"  // ← YE DAAL
+    url: "https://asteroguru.onrender.com/astrologer"
   },
   android: {
     priority: "high",
     notification: {
       sound: "default",
-      clickAction: "FLUTTER_NOTIFICATION_CLICK"  // optional lekin better
+      channelId: "mystudy_channel"   // ← YE ZAROORI HAI!
     }
   },
-  webpush: {
-    fcm_options: {
-      link: "https://asteroguru.onrender.com/astrologer"  // ← YE BHI DAAL
+  apns: {
+    payload: {
+      aps: {
+        sound: "default"
+      }
     }
   }
 });
@@ -368,6 +367,7 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
 
