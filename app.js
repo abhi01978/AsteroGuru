@@ -174,6 +174,7 @@ app.post("/api/save-fcm-token", isAuth, async (req, res) => {
 // ================ SOCKET.IO + FCM PUSH (MAIN MAGIC) ================
 const onlineUsers = {}; // userId → socket.id
 
+// ================ SOCKET.IO CONNECTION ================
 io.on("connection", (socket) => {
   console.log("User connected:", socket.id);
 
@@ -206,102 +207,75 @@ io.on("connection", (socket) => {
     }
   });
 
-  // ================ NEW MESSAGE ================
-socket.on("chatMessage", async ({ to, from, message }) => {
-  if (!to || !from || !message?.trim()) return;
+  // ================ NEW MESSAGE (FINAL WORKING VERSION) ================
+  socket.on("chatMessage", async ({ to, from, message }) => {
+    if (!to || !from || !message?.trim()) return;
 
-  try {
-    // Save message in DB
-    const savedMessage = new Message({ from, to, message: message.trim() });
-    await savedMessage.save();
-
-    const populatedMessage = await Message.findById(savedMessage._id)
-      .populate("from", "fullName profileImage");
-
-    const messageData = {
-      from: populatedMessage.from._id.toString(),
-      fromName: populatedMessage.from.fullName,
-      fromImage: populatedMessage.from.profileImage || null,
-      message: populatedMessage.message,
-      timestamp: populatedMessage.timestamp
-    };
-
-    const receiverSocketId = onlineUsers[to];
-
-    // 1. Agar receiver online hai → Socket.IO se real-time bhejo
-    if (receiverSocketId) {
-      io.to(receiverSocketId).emit("chatMessage", messageData);
-      savedMessage.seen = true;
+    try {
+      const savedMessage = new Message({ from, to, message: message.trim() });
       await savedMessage.save();
-    } 
-    // 2. Agar receiver OFFLINE hai → PURE DATA MESSAGE bhejo (100% reliable)
-    else {
-      const receiver = await User.findById(to).select("fullName fcmToken");
-      if (receiver?.fcmToken) {
-        try {
-          await admin.messaging().send({
-            token: receiver.fcmToken,
-            data: {
-              title: `New Message from ${populatedMessage.from.fullName}`,
-              body: message.trim().substring(0, 120) + (message.trim().length > 120 ? "..." : ""),
-              url: "https://asteroguru.onrender.com/astrologer"
-            },
-            android: {
-              priority: "high",
-              ttl: 240, // 4 minutes max (FCM best practice for chat)
-              notification: {
-                channelId: "mystudy_channel",
-                defaultSound: true,
-                defaultVibrateSettings: true,
-                visibility: "private"
-              }
-            },
-            apns: {
-              headers: { "apns-priority": "10" },
-              payload: {
-                aps: {
-                  sound: "default",
-                  badge: 1
-                }
-              }
+
+      const populatedMessage = await Message.findById(savedMessage._id)
+        .populate("from", "fullName profileImage");
+
+      const messageData = {
+        from: populatedMessage.from._id.toString(),
+        fromName: populatedMessage.from.fullName,
+        fromImage: populatedMessage.from.profileImage || null,
+        message: populatedMessage.message,
+        timestamp: populatedMessage.timestamp
+      };
+
+      const receiverSocketId = onlineUsers[to];
+
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit("chatMessage", messageData);
+        savedMessage.seen = true;
+        await savedMessage.save();
+      } else {
+        const receiver = await User.findById(to).select("fullName fcmToken");
+        if (receiver?.fcmToken) {
+          try {
+            await admin.messaging().send({
+              token: receiver.fcmToken,
+              data: {
+                title: `New Message from ${populatedMessage.from.fullName}`,
+                body: message.trim().substring(0, 120) + (message.trim().length > 120 ? "..." : ""),
+                url: "https://asteroguru.onrender.com/astrologer"
+              },
+              android: { priority: "high", ttl: 240 },
+              apns: { headers: { "apns-priority": "10" } }
+            });
+            console.log(`FCM Data Message sent to ${receiver.fullName} (User was offline)`);
+          } catch (error) {
+            console.error("FCM Error:", error.code || error.message);
+            if (error.code?.includes("registration-token")) {
+              await User.findByIdAndUpdate(to, { $unset: { fcmToken: 1 } });
             }
-          });
-
-          console.log(`FCM Notification sent to ${receiver.fullName} (Offline)`);
-        } catch (error) {
-          console.error("FCM Error:", error.code || error.message);
-
-          // Invalid/expired token → DB se hata do
-          if (error.code?.includes("registration-token")) {
-            await User.findByIdAndUpdate(to, { $unset: { fcmToken: 1 } });
-            console.log("Invalid FCM token removed:", to);
           }
         }
-      } else {
-        console.log("No FCM token for offline user:", to);
+      }
+
+      const senderSocketId = onlineUsers[from];
+      if (senderSocketId) {
+        io.to(senderSocketId).emit("chatMessage", messageData);
+      }
+
+    } catch (err) {
+      console.error("Error in chatMessage handler:", err);
+    }
+  });
+
+  // ================ DISCONNECT ================
+  socket.on("disconnect", () => {
+    for (const userId in onlineUsers) {
+      if (onlineUsers[userId] === socket.id) {
+        console.log(`User ${userId} went offline`);
+        delete onlineUsers[userId];
+        break;
       }
     }
-
-    // 3. Sender ko bhi apna message dikhao (right side)
-    const senderSocketId = onlineUsers[from];
-    if (senderSocketId) {
-      io.to(senderSocketId).emit("chatMessage", messageData);
-    }
-
-  } catch (err) {
-    console.error("Error in chatMessage handler:", err);
-  }
-});
-
-// Disconnect handler (bilkul clean)
-socket.on("disconnect", () => {
-  for (const userId in onlineUsers) {
-    if (onlineUsers[userId] === socket.id) {
-      console.log(`User ${userId} went offline`);
-      delete onlineUsers[userId];
-      break;
-    }
-  }
+  });
 });
 
 
@@ -384,6 +358,7 @@ server.listen(PORT, () => {
   console.log(`Go to: http://localhost:${PORT}/signup`);
   console.log(`OFFLINE PUSH NOTIFICATIONS ENABLED!`);
 });
+
 
 
 
